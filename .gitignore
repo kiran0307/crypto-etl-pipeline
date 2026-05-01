@@ -1,0 +1,9 @@
+.env
+airflow-venv/
+venv/
+__pycache__/
+*.pyc
+logs/
+data/
+*.pbix
+.DS_Store
