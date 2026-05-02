@@ -10,7 +10,7 @@ def transform_data():
     try:
         logging.info("Starting transform step")
 
-        df = pd.read_csv("../data/crypto_raw.csv")
+        df = pd.read_csv("../data/raw/crypto/crypto_raw.csv")
 
         if df.empty:
             raise ValueError("Raw input file is empty.")
@@ -46,13 +46,13 @@ def transform_data():
         if df.empty:
             raise ValueError("Transformed DataFrame is empty after cleaning.")
 
-        df.to_csv("../data/crypto_transformed.csv", index=False)
+        df.to_csv("../data/processed/crypto/crypto_transformed.csv", index=False)
 
-        logging.info("Transformed data saved successfully to ../data/crypto_transformed.csv")
+        logging.info("Transformed data saved successfully to ../data/processed/crypto/crypto_transformed.csv")
         logging.info(f"Transformed row count: {len(df)}")
 
     except FileNotFoundError:
-        logging.error("Input file ../data/crypto_raw.csv not found")
+        logging.error("Input file ../data/raw/crypto/crypto_raw.csv not found")
         raise
     except Exception as e:
         logging.error(f"Unexpected error in transform step: {e}")

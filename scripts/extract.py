@@ -48,10 +48,10 @@ def extract_data():
         if df.empty:
             raise ValueError("Extracted DataFrame is empty.")
 
-        os.makedirs("../data", exist_ok=True)
-        df.to_csv("../data/crypto_raw.csv", index=False)
+        os.makedirs("../data/raw/crypto", exist_ok=True)
+        df.to_csv("../data/raw/crypto/crypto_raw.csv", index=False)
 
-        logging.info("Raw data saved successfully to ../data/crypto_raw.csv")
+        logging.info("Raw data saved successfully to ../data/raw/crypto/crypto_raw.csv")
         logging.info(f"Extracted {len(df)} records")
 
     except requests.exceptions.RequestException as e:

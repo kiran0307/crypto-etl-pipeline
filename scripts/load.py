@@ -21,7 +21,7 @@ def load_to_postgres():
     try:
         logging.info("Starting load step")
 
-        df = pd.read_csv("../data/crypto_transformed.csv")
+        df = pd.read_csv("../data/processed/crypto/crypto_transformed.csv")
         
         if df.empty:
             raise ValueError("Transformed input file is empty.")
@@ -89,7 +89,7 @@ def load_to_postgres():
         logging.info(f"Current table row count: {current_count}")
 
     except FileNotFoundError:
-        logging.error("Input file ../data/crypto_transformed.csv not found")
+        logging.error("Input file ../data/processed/crypto/crypto_transformed.csv not found")
         raise
     except SQLAlchemyError as e:
         logging.error(f"Database error: {e}")
