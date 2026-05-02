@@ -1,5 +1,7 @@
 import pandas as pd
 import logging
+from azure_storage import upload_file_to_adls
+import os
 
 from logger_config import setup_logger
 
@@ -46,9 +48,17 @@ def transform_data():
         if df.empty:
             raise ValueError("Transformed DataFrame is empty after cleaning.")
 
-        df.to_csv("../data/processed/crypto/crypto_transformed.csv", index=False)
+        os.makedirs("../data/processed/crypto", exist_ok=True)
 
-        logging.info("Transformed data saved successfully to ../data/processed/crypto/crypto_transformed.csv")
+        local_processed_path = "../data/processed/crypto/crypto_transformed.csv"
+        df.to_csv(local_processed_path, index=False)
+
+        upload_file_to_adls(
+        local_file_path=local_processed_path,
+        blob_path="processed/crypto/crypto_transformed.csv"
+)
+
+        logging.info("Transformed data saved locally and uploaded to ADLS")
         logging.info(f"Transformed row count: {len(df)}")
 
     except FileNotFoundError:

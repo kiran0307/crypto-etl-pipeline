@@ -5,6 +5,7 @@ import logging
 import time
 
 from logger_config import setup_logger
+from azure_storage import upload_file_to_adls
 
 setup_logger()
 
@@ -49,9 +50,16 @@ def extract_data():
             raise ValueError("Extracted DataFrame is empty.")
 
         os.makedirs("../data/raw/crypto", exist_ok=True)
-        df.to_csv("../data/raw/crypto/crypto_raw.csv", index=False)
 
-        logging.info("Raw data saved successfully to ../data/raw/crypto/crypto_raw.csv")
+        local_raw_path = "../data/raw/crypto/crypto_raw.csv"
+        df.to_csv(local_raw_path, index=False)
+
+        upload_file_to_adls(
+         local_file_path=local_raw_path,
+        blob_path="raw/crypto/crypto_raw.csv"
+)
+
+        logging.info("Raw data saved locally and uploaded to ADLS")
         logging.info(f"Extracted {len(df)} records")
 
     except requests.exceptions.RequestException as e:
