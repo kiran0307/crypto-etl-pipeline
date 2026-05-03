@@ -17,15 +17,62 @@ env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(env_path)
 
 
-def load_to_postgres():
+def get_database_engine():
+    db_target = os.getenv("DB_TARGET", "postgres").lower()
+
+    if db_target == "azure_sql":
+        server = os.getenv("AZURE_SQL_SERVER")
+        database = os.getenv("AZURE_SQL_DATABASE")
+        username = os.getenv("AZURE_SQL_USER")
+        password_raw = os.getenv("AZURE_SQL_PASSWORD")
+        driver = os.getenv("AZURE_SQL_DRIVER", "ODBC Driver 18 for SQL Server")
+
+        if not all([server, database, username, password_raw, driver]):
+            raise ValueError("Missing one or more Azure SQL environment variables.")
+
+        password = quote_plus(password_raw)
+        driver = quote_plus(driver)
+
+        engine = create_engine(
+            f"mssql+pyodbc://{username}:{password}@{server}:1433/{database}"
+            f"?driver={driver}&Encrypt=yes&TrustServerCertificate=no&Connection Timeout=30",
+            fast_executemany=True
+        )
+
+        logging.info("Using Azure SQL database target")
+        return engine
+
+    elif db_target == "postgres":
+        username = os.getenv("DB_USER")
+        password_raw = os.getenv("DB_PASSWORD")
+        host = os.getenv("DB_HOST")
+        port = os.getenv("DB_PORT")
+        database = os.getenv("DB_NAME")
+
+        if not all([username, password_raw, host, port, database]):
+            raise ValueError("Missing one or more PostgreSQL environment variables.")
+
+        password = quote_plus(password_raw)
+
+        engine = create_engine(
+            f"postgresql+psycopg2://{username}:{password}@{host}:{port}/{database}"
+        )
+
+        logging.info("Using PostgreSQL database target")
+        return engine
+
+    else:
+        raise ValueError(f"Unsupported DB_TARGET value: {db_target}")
+
+
+def load_to_database():
     try:
         logging.info("Starting load step")
 
         df = pd.read_csv("../data/processed/crypto/crypto_transformed.csv")
-        
+
         if df.empty:
             raise ValueError("Transformed input file is empty.")
-            
 
         batch_id = str(uuid.uuid4())
         load_timestamp = pd.Timestamp.now()
@@ -35,26 +82,13 @@ def load_to_postgres():
 
         df = df.drop_duplicates(subset=["id", "batch_id"])
 
-        username = os.getenv("DB_USER")
-        password_raw = os.getenv("DB_PASSWORD")
-        host = os.getenv("DB_HOST")
-        port = os.getenv("DB_PORT")
-        database = os.getenv("DB_NAME")
+        engine = get_database_engine()
 
-        if not all([username, password_raw, host, port, database]):
-            raise ValueError(
-                "Missing one or more DB environment variables. "
-                "Check .env file and variable names."
-            )
-
-        password = quote_plus(password_raw)
-
-        engine = create_engine(
-            f"postgresql+psycopg2://{username}:{password}@{host}:{port}/{database}"
-        )
+        logging.info("Opening database transaction...")
 
         with engine.begin() as connection:
-            # Append to historical table
+            logging.info("Writing crypto_prices_history...")
+
             df.to_sql(
                 "crypto_prices_history",
                 con=connection,
@@ -62,15 +96,16 @@ def load_to_postgres():
                 index=False
             )
 
-            # Refresh current table without dropping schema
-            connection.execute(text("DELETE FROM crypto_prices_current"))
+            logging.info("Refreshing crypto_prices_current...")
 
             df.to_sql(
                 "crypto_prices_current",
                 con=connection,
-                if_exists="append",
+                if_exists="replace",
                 index=False
             )
+
+        logging.info("Database load completed")
 
         with engine.connect() as connection:
             history_count = connection.execute(
@@ -100,4 +135,4 @@ def load_to_postgres():
 
 
 if __name__ == "__main__":
-    load_to_postgres()
+    load_to_database()
